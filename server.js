@@ -1,40 +1,67 @@
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path');
 
 const app = express();
+
+// Environment Variables
+const PORT = process.env.PORT || 5000;
+const FQDN = process.env.APP_FQDN || 'localhost';
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/collection_db';
+
+// Dynamic CORS Configuration
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  `http://${FQDN}`,
+  `https://${FQDN}`,
+  'http://localhost:3000',
+  'http://127.0.0.1:5000'
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS policy violation for this FQDN'));
+    }
+  },
+  credentials: true
+}));
+
 app.use(express.json());
-app.use(cors());
 
-// আপনার MongoDB URL এখানে বসান
-const MONGO_URI = "YOUR_MONGODB_URL_HERE";
+// Serve Static Files from the "static" folder
+app.use('/static', express.static(path.join(__dirname, 'static')));
 
+// Database Connection
 mongoose.connect(MONGO_URI)
   .then(() => console.log('MongoDB Connected Successfully'))
   .catch(err => console.error('MongoDB Connection Error:', err));
 
-// Schema এবং Model
+// MongoDB Schema & Model
 const CollectionSchema = new mongoose.Schema({
-  name: String,
-  amount: Number,
+  name: { type: String, required: true },
+  amount: { type: Number, required: true },
   date: { type: Date, default: Date.now }
 });
 
 const Collection = mongoose.model('Collection', CollectionSchema);
 
-// API Route: তথ্য সেভ করার জন্য
+// API Endpoints
 app.post('/api/add', async (req, res) => {
   try {
     const { name, amount } = req.body;
     const newEntry = new Collection({ name, amount });
     await newEntry.save();
-    res.status(201).json({ message: "Data saved successfully!", data: newEntry });
+    res.status(201).json({ message: "Entry saved successfully!", data: newEntry });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// API Route: সব তথ্য দেখার জন্য
 app.get('/api/all', async (req, res) => {
   try {
     const data = await Collection.find();
@@ -44,6 +71,8 @@ app.get('/api/all', async (req, res) => {
   }
 });
 
-app.listen(5000, () => {
-  console.log('Server is running on port 5000');
+// Start Server
+app.listen(PORT, () => {
+  console.log(`Server running on: http://${FQDN}:${PORT}`);
+  console.log(`Static assets accessible at: http://${FQDN}:${PORT}/static/logo.png`);
 });
