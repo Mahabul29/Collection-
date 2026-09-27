@@ -1,347 +1,40 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Collection Tracker</title>
-    <!-- Google Fonts & Font Awesome Icons -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Poppins', sans-serif;
-        }
+require('dotenv').config();
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
 
-        body {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            color: #f8fafc;
-            min-height: 100vh;
-            padding: 40px 20px;
-        }
+const app = express();
 
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-        }
+const PORT = process.env.PORT || 5000;
+const FQDN = process.env.APP_FQDN || 'localhost';
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/collection_db';
 
-        /* Header Style */
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
+// Dynamic CORS using FQDN
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  `http://${FQDN}`,
+  `https://${FQDN}`,
+  'http://localhost:3000'
+];
 
-        .header h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            background: linear-gradient(to right, #38bdf8, #818cf8);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS policy violation for this FQDN'));
+    }
+  },
+  credentials: true
+}));
 
-        .header p {
-            color: #94a3b8;
-            font-size: 0.95rem;
-        }
+app.use(express.json());
 
-        /* Dashboard Cards */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
+// MongoDB Connection
+mongoose.connect(MONGO_URI)
+  .then(() => console.log('MongoDB Connected Successfully'))
+  .catch(err => console.error('MongoDB Error:', err));
 
-        .card {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            padding: 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-        }
-
-        .card-icon {
-            width: 50px;
-            height: 50px;
-            border-radius: 12px;
-            background: rgba(56, 189, 248, 0.1);
-            color: #38bdf8;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-        }
-
-        .card-info h3 {
-            font-size: 0.85rem;
-            color: #94a3b8;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .card-info p {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #ffffff;
-        }
-
-        /* Form & Table Section */
-        .main-content {
-            display: grid;
-            grid-template-columns: 1fr 1.5fr;
-            gap: 25px;
-        }
-
-        @media (max-width: 768px) {
-            .main-content {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            padding: 25px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-        }
-
-        .panel-title {
-            font-size: 1.2rem;
-            margin-bottom: 20px;
-            color: #f1f5f9;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        /* Form Inputs */
-        .input-group {
-            margin-bottom: 15px;
-        }
-
-        .input-group label {
-            display: block;
-            font-size: 0.85rem;
-            color: #94a3b8;
-            margin-bottom: 5px;
-        }
-
-        .input-group input {
-            width: 100%;
-            padding: 12px 15px;
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            background: rgba(15, 23, 42, 0.6);
-            color: #fff;
-            outline: none;
-            transition: all 0.3s;
-        }
-
-        .input-group input:focus {
-            border-color: #38bdf8;
-            box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
-        }
-
-        .btn-submit {
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            background: linear-gradient(135deg, #38bdf8, #6366f1);
-            color: #fff;
-            font-weight: 600;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .btn-submit:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(56, 189, 248, 0.4);
-        }
-
-        /* Table Design */
-        .table-container {
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-        }
-
-        th, td {
-            padding: 12px 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        th {
-            color: #94a3b8;
-            font-size: 0.85rem;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        td {
-            font-size: 0.95rem;
-        }
-
-        tr:hover {
-            background: rgba(255, 255, 255, 0.02);
-        }
-
-        .badge-amount {
-            background: rgba(34, 197, 94, 0.15);
-            color: #4ade80;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 0.85rem;
-        }
-    </style>
-</head>
-<body>
-
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <h1><i class="fa-solid fa-wallet"></i> Collection Tracker</h1>
-            <p>Real-time Entry and Database Management System</p>
-        </div>
-
-        <!-- Dashboard Cards -->
-        <div class="stats-grid">
-            <div class="card">
-                <div class="card-icon"><i class="fa-solid fa-coins"></i></div>
-                <div class="card-info">
-                    <h3>Total Collected</h3>
-                    <p>$ <span id="totalAmount">0</span></p>
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-icon" style="color: #a855f7; background: rgba(168, 85, 247, 0.1);">
-                    <i class="fa-solid fa-users"></i>
-                </div>
-                <div class="card-info">
-                    <h3>Total Members</h3>
-                    <p id="totalEntries">0</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Content Area -->
-        <div class="main-content">
-            <!-- Entry Form -->
-            <div class="glass-panel">
-                <div class="panel-title">
-                    <i class="fa-solid fa-user-plus"></i> New Collection Entry
-                </div>
-                <form id="collectionForm">
-                    <div class="input-group">
-                        <label for="name">Member Name</label>
-                        <input type="text" id="name" placeholder="Enter full name" required>
-                    </div>
-                    <div class="input-group">
-                        <label for="amount">Collection Amount</label>
-                        <input type="number" id="amount" placeholder="e.g. 500" required>
-                    </div>
-                    <button type="submit" class="btn-submit">
-                        <i class="fa-solid fa-paper-plane"></i> Save Entry
-                    </button>
-                </form>
-            </div>
-
-            <!-- Data Table -->
-            <div class="glass-panel">
-                <div class="panel-title">
-                    <i class="fa-solid fa-list-check"></i> Recent Records
-                </div>
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Name</th>
-                                <th>Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody id="dataTable">
-                            <!-- Dynamic Content Will Appear Here -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const API_URL = 'http://localhost:5000/api';
-
-        // Database data fetch & Calculate UI Total
-        async function fetchData() {
-            try {
-                const res = await fetch(`${API_URL}/all`);
-                const data = await res.json();
-                
-                const tableBody = document.getElementById('dataTable');
-                tableBody.innerHTML = '';
-
-                let totalSum = 0;
-
-                data.forEach((item, index) => {
-                    totalSum += Number(item.amount);
-                    const row = `
-                        <tr>
-                            <td>${index + 1}</td>
-                            <td>${item.name}</td>
-                            <td><span class="badge-amount">$ ${item.amount}</span></td>
-                        </tr>
-                    `;
-                    tableBody.innerHTML += row;
-                });
-
-                // Update Cards
-                document.getElementById('totalAmount').innerText = totalSum;
-                document.getElementById('totalEntries').innerText = data.length;
-
-            } catch (err) {
-                console.error("Server error or connection offline:", err);
-            }
-        }
-
-        // Send Form Data to MongoDB
-        document.getElementById('collectionForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const name = document.getElementById('name').value;
-            const amount = document.getElementById('amount').value;
-
-            try {
-                await fetch(`${API_URL}/add`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, amount })
-                });
-
-                document.getElementById('name').value = '';
-                document.getElementById('amount').value = '';
-                fetchData(); // Refresh UI
-            } catch (err) {
-                alert("Failed to save data. Check backend connection.");
-            }
-        });
-
-        // Initial Load
-        fetchData();
-    </script>
-</body>
-</html>
+app.listen(PORT, () => {
+  console.log(`Server running on FQDN: http://${FQDN}:${PORT}`);
+});
