@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collection Tracker</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 30px; }
+        form { margin-bottom: 20px; }
+        input { padding: 8px; margin-right: 10px; }
+        button { padding: 8px 15px; cursor: pointer; }
+        table { width: 50%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    </style>
+</head>
+<body>
+
+    <h2>Collection Entry Form</h2>
+
+    <form id="collectionForm">
+        <input type="text" id="name" placeholder="Enter Name" required>
+        <input type="number" id="amount" placeholder="Enter Amount" required>
+        <button type="submit">Submit to Database</button>
+    </form>
+
+    <h2>Database Collections</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Amount</th>
+            </tr>
+        </thead>
+        <tbody id="dataTable"></tbody>
+    </table>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+
+        // Fetch data from database
+        async function fetchData() {
+            const res = await fetch(`${API_URL}/all`);
+            const data = await res.json();
+            const tableBody = document.getElementById('dataTable');
+            tableBody.innerHTML = '';
+
+            data.forEach(item => {
+                const row = `<tr><td>${item.name}</td><td>${item.amount}</td></tr>`;
+                tableBody.innerHTML += row;
+            });
+        }
+
+        // Add data to database
+        document.getElementById('collectionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('name').value;
+            const amount = document.getElementById('amount').value;
+
+            await fetch(`${API_URL}/add`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, amount })
+            });
+
+            document.getElementById('name').value = '';
+            document.getElementById('amount').value = '';
+            fetchData();
+        });
+
+        fetchData();
+    </script>
+</body>
+</html>
