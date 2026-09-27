@@ -8,7 +8,6 @@ from pydantic import BaseModel, Field
 from config import settings
 from database import connect_to_mongo, close_mongo_connection, get_database
 
-# Lifespan Context Manager for DB Startup and Shutdown
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await connect_to_mongo()
@@ -38,10 +37,10 @@ class CollectionItem(BaseModel):
     name: str = Field(..., example="John Doe")
     amount: float = Field(..., gt=0, example=150.0)
 
-# Routes
+# Root Route (Returns only FQDN)
 @app.get("/")
 async def root():
-    return {"message": f"Welcome to {settings.APP_NAME}", "fqdn": settings.APP_FQDN}
+    return {"fqdn": settings.APP_FQDN}
 
 @app.post("/api/add", status_code=status.HTTP_201_CREATED)
 async def add_entry(item: CollectionItem):
